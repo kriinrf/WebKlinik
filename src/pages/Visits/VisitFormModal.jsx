@@ -3,12 +3,12 @@ import { X } from 'lucide-react';
 import { useData } from '../../data/DataContext';
 
 const VisitFormModal = ({ isOpen, onClose, visitToEdit }) => {
-  const { addVisit, updateVisit, patients } = useData();
+  const { addVisit, updateVisit, patients, doctors } = useData();
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     patientId: '',
     complaint: '',
-    doctor: '',
+    doctorId: '',
     status: 'Menunggu',
     note: ''
   });
@@ -22,7 +22,7 @@ const VisitFormModal = ({ isOpen, onClose, visitToEdit }) => {
         date: visitToEdit.visit_date || visitToEdit.date || '',
         patientId: visitToEdit.patient_id || visitToEdit.patientId || '',
         complaint: visitToEdit.complaint || '',
-        doctor: visitToEdit.doctor || '',
+        doctorId: visitToEdit.doctor_id || visitToEdit.doctorId || '',
         status: visitToEdit.status || 'Menunggu',
         note: visitToEdit.note || ''
       });
@@ -31,7 +31,7 @@ const VisitFormModal = ({ isOpen, onClose, visitToEdit }) => {
         date: new Date().toISOString().split('T')[0],
         patientId: '',
         complaint: '',
-        doctor: '',
+        doctorId: '',
         status: 'Menunggu',
         note: ''
       });
@@ -47,7 +47,7 @@ const VisitFormModal = ({ isOpen, onClose, visitToEdit }) => {
     if (!formData.date) newErrors.date = 'Tanggal kunjungan wajib diisi';
     if (!formData.patientId) newErrors.patientId = 'Pasien wajib dipilih';
     if (!formData.complaint.trim()) newErrors.complaint = 'Keluhan wajib diisi';
-    if (!formData.doctor.trim()) newErrors.doctor = 'Dokter wajib diisi';
+    if (!formData.doctorId) newErrors.doctorId = 'Dokter wajib dipilih';
     if (!formData.status) newErrors.status = 'Status wajib dipilih';
 
     setErrors(newErrors);
@@ -145,14 +145,20 @@ const VisitFormModal = ({ isOpen, onClose, visitToEdit }) => {
 
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Dokter *</label>
-              <input
-                type="text"
-                name="doctor"
-                value={formData.doctor}
+              <select
+                name="doctorId"
+                value={formData.doctorId}
                 onChange={handleChange}
-                className={`w-full px-4 py-2.5 rounded-lg border ${errors.doctor ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} focus:outline-none focus:ring-2 focus:ring-opacity-20 transition-colors`}
-              />
-              {errors.doctor && <p className="text-sm text-red-500">{errors.doctor}</p>}
+                className={`w-full px-4 py-2.5 rounded-lg border ${errors.doctorId ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'} focus:outline-none focus:ring-2 focus:ring-opacity-20 transition-colors bg-white`}
+              >
+                <option value="">Pilih dokter...</option>
+                {doctors.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.poli})
+                  </option>
+                ))}
+              </select>
+              {errors.doctorId && <p className="text-sm text-red-500">{errors.doctorId}</p>}
             </div>
 
             <div className="space-y-2">

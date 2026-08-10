@@ -6,6 +6,7 @@ const API_BASE = 'http://localhost/WebKlinik/backend/api';
 
 const api = axios.create({
   baseURL: API_BASE,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -49,6 +50,10 @@ export const visitsApi = {
 
   delete: (id) =>
     api.delete(`/visits.php?id=${id}`),
+};
+
+export const doctorsApi = {
+  getAll: () => api.get('/doctors.php')
 };
 
 // =============================================

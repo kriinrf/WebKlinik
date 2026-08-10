@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Search, Plus, Edit2, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useData } from '../../data/DataContext';
+import { useAuth } from '../../context/AuthContext';
 import PatientFormModal from './PatientFormModal';
 import DeleteConfirmModal from '../../components/DeleteConfirmModal';
 
 const Patients = () => {
   const { patients, deletePatient } = useData();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Modals state
@@ -76,13 +78,15 @@ const Patients = () => {
           />
         </div>
         
-        <button 
-          onClick={handleAdd}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm font-medium"
-        >
-          <Plus size={18} />
-          <span>Tambah Pasien</span>
-        </button>
+        {user?.role !== 'pasien' && (
+          <button 
+            onClick={handleAdd}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-sm font-medium"
+          >
+            <Plus size={18} />
+            <span>Tambah Pasien</span>
+          </button>
+        )}
       </div>
 
       {/* Table Section */}
@@ -96,7 +100,9 @@ const Patients = () => {
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">NIK</th>
                 <th className="px-6 py-4 font-semibold">JK</th>
                 <th className="px-6 py-4 font-semibold whitespace-nowrap">No HP</th>
-                <th className="px-6 py-4 font-semibold text-center">Aksi</th>
+                {user?.role !== 'pasien' && (
+                  <th className="px-6 py-4 font-semibold text-center">Aksi</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -113,24 +119,26 @@ const Patients = () => {
                     <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{patient.nik}</td>
                     <td className="px-6 py-4 text-gray-600">{patient.gender}</td>
                     <td className="px-6 py-4 text-gray-600 whitespace-nowrap">{patient.phone}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => handleEdit(patient)}
-                          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                          title="Edit"
-                        >
-                          <Edit2 size={18} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteClick(patient)}
-                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Hapus"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
+                    {user?.role !== 'pasien' && (
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => handleEdit(patient)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteClick(patient)}
+                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (

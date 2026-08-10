@@ -11,6 +11,7 @@ USE db_klinik;
 -- =============================================
 DROP TABLE IF EXISTS visits;
 DROP TABLE IF EXISTS patients;
+DROP TABLE IF EXISTS users;
 
 CREATE TABLE patients (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -21,6 +22,8 @@ CREATE TABLE patients (
     birth_date DATE NOT NULL,
     phone VARCHAR(20),
     address TEXT,
+    email VARCHAR(100),
+    username VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ON UPDATE CURRENT_TIMESTAMP
@@ -35,6 +38,8 @@ CREATE TABLE visits (
     visit_date DATE NOT NULL,
     complaint TEXT NOT NULL,
     doctor VARCHAR(100) NOT NULL,
+    doctor_name VARCHAR(100),
+    service_note TEXT,
     status ENUM('Menunggu','Diproses','Selesai') NOT NULL,
     note TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -45,6 +50,20 @@ CREATE TABLE visits (
         REFERENCES patients(id)
         ON DELETE CASCADE
         ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- Tabel: users
+-- =============================================
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    role ENUM('admin','dokter','pasien') NOT NULL,
+    reference_id INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
@@ -158,3 +177,15 @@ INSERT INTO visits (patient_id, visit_date, complaint, doctor, status, note) VAL
 (2,  '2026-07-29', 'Ruam kulit merah di lengan',               'dr. Ahmad Fauzi',  'Menunggu',  NULL),
 (13, '2026-07-30', 'Nyeri saat buang air kecil',               'dr. Rina Susanti', 'Menunggu',  NULL),
 (21, '2026-07-30', 'Nyeri dada kontrol ulang',                 'dr. Budi Santoso', 'Menunggu',  NULL);
+
+-- =============================================
+-- Data Dummy: Users
+-- Password for all users is "password"
+-- =============================================
+INSERT INTO users (username, password, role, reference_id) VALUES
+('admin', '$2y$10$qAz/BDbZ2DVlHxDGQqulIe37K3UfkmBAnEpkaxoFsiIy74svrstAS', 'admin', NULL),
+('dokter_ahmad', '$2y$10$qAz/BDbZ2DVlHxDGQqulIe37K3UfkmBAnEpkaxoFsiIy74svrstAS', 'dokter', NULL),
+('pasien_andi', '$2y$10$qAz/BDbZ2DVlHxDGQqulIe37K3UfkmBAnEpkaxoFsiIy74svrstAS', 'pasien', 1);
+
+-- Update username in patients table for patient 1
+UPDATE patients SET username = 'pasien_andi', email = 'andi@example.com' WHERE id = 1;

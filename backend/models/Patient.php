@@ -106,4 +106,20 @@ class Patient {
         $row = $stmt->fetch();
         return (int) $row['total'];
     }
+
+    // Update patient contact info (phone & address)
+    public function updateContact($id, $phone, $address) {
+        $query = "UPDATE {$this->table} SET 
+                  phone = :phone,
+                  address = :address
+                  WHERE id = :id";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindParam(':id', $id, PDO::PARAM_INT);
+        $stmt->bindParam(':phone', $phone);
+        $stmt->bindParam(':address', $address);
+        
+        return $stmt->execute();
+    }
 }
+?>

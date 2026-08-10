@@ -1,15 +1,39 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { LayoutDashboard, Users, ClipboardList, Activity, Menu, X } from 'lucide-react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Users, ClipboardList, Activity, Menu, X, LogOut, UserCog } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const MainLayout = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navItems = [
-    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/pasien', label: 'Data Pasien', icon: Users },
-    { path: '/kunjungan', label: 'Data Kunjungan', icon: ClipboardList },
-  ];
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const getNavItems = () => {
+    if (!user) return [];
+    
+    const items = [
+      { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    ];
+
+    if (user.role === 'admin') {
+      items.push({ path: '/pasien', label: 'Data Pasien', icon: Users });
+      items.push({ path: '/kunjungan', label: 'Data Kunjungan', icon: ClipboardList });
+    } else if (user.role === 'dokter') {
+      items.push({ path: '/kunjungan', label: 'Data Kunjungan', icon: ClipboardList });
+    }
+
+    items.push({ path: '/profil', label: 'Profil', icon: UserCog });
+
+    return items;
+  };
+
+  const navItems = getNavItems();
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   const SidebarContent = () => (
     <>
@@ -43,7 +67,25 @@ const MainLayout = () => {
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-100">
+      <div className="p-4 border-t border-gray-100 space-y-4">
+        {user && (
+          <div className="flex items-center gap-3 px-3">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-medium text-gray-900 truncate">{user.name || user.username}</p>
+              <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+            </div>
+          </div>
+        )}
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
         <p className="text-xs text-center text-gray-400 font-medium">
           Fiqri Nur Faqih Muhammad <br />
           15124010 <br />

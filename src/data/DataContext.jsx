@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { patientsApi, visitsApi } from '../services/api';
+import { patientsApi, visitsApi, doctorsApi } from '../services/api';
 
 const DataContext = createContext();
 
@@ -10,6 +10,7 @@ export const useData = () => {
 export const DataProvider = ({ children }) => {
   const [patients, setPatients] = useState([]);
   const [visits, setVisits] = useState([]);
+  const [doctors, setDoctors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,14 +39,25 @@ export const DataProvider = ({ children }) => {
     }
   }, []);
 
+  const fetchDoctors = useCallback(async () => {
+    try {
+      const res = await doctorsApi.getAll();
+      if (res.data.status === 'success') {
+        setDoctors(res.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching doctors:', err);
+    }
+  }, []);
+
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      await Promise.all([fetchPatients(), fetchVisits()]);
+      await Promise.all([fetchPatients(), fetchVisits(), fetchDoctors()]);
       setLoading(false);
     };
     fetchAll();
-  }, [fetchPatients, fetchVisits]);
+  }, [fetchPatients, fetchVisits, fetchDoctors]);
 
   // --- Patients CRUD ---
   const addPatient = async (patient) => {
@@ -113,9 +125,9 @@ export const DataProvider = ({ children }) => {
     try {
       const payload = {
         patient_id: parseInt(visit.patientId || visit.patient_id),
+        doctor_id: parseInt(visit.doctorId || visit.doctor_id),
         visit_date: visit.date || visit.visit_date,
         complaint: visit.complaint,
-        doctor: visit.doctor,
         status: visit.status,
         note: visit.note || null,
       };
@@ -135,9 +147,9 @@ export const DataProvider = ({ children }) => {
     try {
       const payload = {
         patient_id: parseInt(visit.patientId || visit.patient_id),
+        doctor_id: parseInt(visit.doctorId || visit.doctor_id),
         visit_date: visit.date || visit.visit_date,
         complaint: visit.complaint,
-        doctor: visit.doctor,
         status: visit.status,
         note: visit.note || null,
       };
@@ -176,6 +188,7 @@ export const DataProvider = ({ children }) => {
     addVisit,
     updateVisit,
     deleteVisit,
+    doctors,
     loading,
     error,
     refreshPatients: fetchPatients,

@@ -1,529 +1,205 @@
-Sistem Informasi Klinik Sederhana
+# Product Requirements Document (PRD) - Sistem Informasi Klinik Sejahterah
 
-Versi: 2.0 (Simple Version)
-Nama Aplikasi: Sistem Informasi Klinik
-Platform: Web Application
-Frontend: ReactJS + Vite + Tailwind CSS
-Backend: PHP Native (REST API sederhana)
-Database: MySQL
+**Versi:** 3.1 (Refactored for Normalization)
+**Nama Aplikasi:** Sistem Informasi Klinik Sejahterah
+**Platform:** Web Application (Single Page Application)
+**Frontend:** ReactJS + Vite + Tailwind CSS
+**Backend:** PHP Native (REST API)
+**Database:** MySQL
 
-1. Latar Belakang
+---
 
-Sistem Informasi Klinik merupakan aplikasi berbasis web yang dirancang untuk membantu proses administrasi klinik secara sederhana. Fokus utama aplikasi adalah mengelola data pasien dan data kunjungan agar pencatatan menjadi lebih rapi, cepat, dan mudah dicari.
+## 1. Latar Belakang & Tujuan
+Sistem Informasi Klinik Sejahterah adalah aplikasi berbasis web yang dirancang untuk digitalisasi proses administrasi dan pelayanan medis di klinik. Aplikasi ini bertujuan untuk:
+1. Memfasilitasi pendaftaran mandiri (registrasi) bagi pasien dan dokter.
+2. Mengamankan data rekam medis dengan autentikasi berjenjang (Role-Based Access Control).
+3. Mempermudah dokter dalam memantau antrean dan memberikan catatan medis.
+4. Memungkinkan pasien melihat profil dan riwayat kunjungan kesehatannya.
+5. Memberikan dashboard ringkasan data bagi administrator klinik.
 
-Versi ini dibuat dengan ruang lingkup yang sederhana sehingga mudah dipahami dan dikembangkan lebih lanjut.
+---
 
-2. Tujuan
+## 2. Teknologi & Arsitektur
 
-Aplikasi ini bertujuan untuk:
+Aplikasi ini menggunakan arsitektur terpisah (Decoupled Architecture) antara Frontend dan Backend yang berkomunikasi melalui REST API.
 
-Mengelola data pasien.
-Mengelola data kunjungan pasien.
-Menampilkan ringkasan informasi melalui dashboard.
-Mempermudah proses pencarian dan pengelolaan data.
-3. Ruang Lingkup
+### Frontend
+- **Framework:** ReactJS (dikompilasi dengan Vite).
+- **Styling:** Tailwind CSS (menggunakan prinsip desain modern, *glassmorphism*, *responsive*).
+- **Routing:** React Router DOM v6.
+- **State Management:** React Context API (terpusat untuk Data dan Autentikasi).
+- **HTTP Client:** Axios (dengan konfigurasi `withCredentials: true` untuk menahan sesi Cookie).
+- **Visualisasi:** Recharts (untuk grafik analitik admin).
+- **Ikon:** Lucide React.
 
-Aplikasi terdiri dari tiga menu utama:
+### Backend
+- **Bahasa:** PHP 8+ (Native, tanpa framework).
+- **Pendekatan:** RESTful API murni (menerima JSON, mengembalikan JSON).
+- **Koneksi DB:** PDO (PHP Data Objects) menggunakan *Prepared Statements* untuk mencegah SQL Injection.
+- **Autentikasi:** Session-based (tersimpan di Server, dikirim via HTTP-Only Cookie).
 
-Dashboard
+---
 
-Data Pasien
+## 3. Aktor Sistem & Hak Akses (Role)
 
-Data Kunjungan
+Aplikasi mengelompokkan pengguna ke dalam 3 role (peran) utama:
 
-Tidak termasuk:
+| Aktor | Hak Akses & Keterangan |
+| :--- | :--- |
+| **Admin** | Memiliki akses penuh. Dapat melihat dashboard analitik (grafik per bulan/tahun), melihat semua data pasien, melihat dan mengubah status semua data kunjungan. Hanya admin yang tidak terikat dengan profil identitas terpisah. |
+| **Dokter** | Hanya dapat melihat antrean pasien hari ini dan riwayat kunjungan, mengubah status kunjungan (Menunggu, Diproses, Selesai), dan memberikan catatan medis (resep/diagnosis). Terhubung secara relasional ke tabel `doctors`. |
+| **Pasien** | Hanya dapat mengakses portal pribadinya. Bisa melihat profil, mengubah data kontak pribadinya, dan melihat riwayat kunjungannya sendiri (tidak bisa melihat kunjungan orang lain). Terhubung secara relasional ke tabel `patients`. |
 
-Login
-Rekam Medis
-Data Dokter
-Farmasi
-Kasir
-Laboratorium
-BPJS
-Rawat Inap
-4. Teknologi
-Frontend
-Teknologi	Keterangan
-ReactJS	Library frontend
-Vite	Build tool
-Tailwind CSS	Styling
-Axios	HTTP Request
-React Router DOM	Routing
-Backend
-Teknologi	Keterangan
-PHP Native	CRUD API
-MySQL	Database
-Editor
+---
 
-Visual Studio Code
+## 4. Desain Database (Untuk ERD & Analisis)
 
-Browser
+**Nama Database:** `db_klinik`
 
-Google Chrome
+Desain relasional ini dioptimalkan untuk menghindari redundansi data kredensial login dengan data identitas fisik pengguna.
 
-Microsoft Edge
+### A. Tabel `users` (Manajemen Kredensial Login)
+Tabel ini digunakan HANYA untuk proses autentikasi (login) dan penentuan Role. 
 
-5. Desain UI/UX
-Konsep Desain
+> **Justifikasi Desain (Polymorphic Association):** Penggunaan satu kolom `reference_id` untuk merujuk ke tabel yang berbeda (`patients` atau `doctors`) mengadopsi pola *Polymorphic Association*. Pola ini dipilih untuk merampingkan arsitektur autentikasi terpusat. Konsekuensi dari pola ini adalah *Foreign Key Constraint* tidak dapat ditegakkan secara *native* di level MySQL. Oleh karena itu, perlindungan integritas data dialihkan ke **Application Layer (PHP)** menggunakan mekanisme validasi ketat dan blok *Database Transaction* (`PDO::beginTransaction`, `commit`, `rollBack`) setiap kali ada operasi CRUD yang krusial.
+| Field | Tipe | Constraints | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | PK, Auto Increment | ID User unik |
+| `username` | VARCHAR(50) | UNIQUE, NOT NULL | Username untuk login (auto-generate saat register) |
+| `password` | VARCHAR(255)| NOT NULL | Kata sandi (di-hash menggunakan algoritma `Bcrypt` via `password_hash()`) |
+| `role` | ENUM | NOT NULL | Terdiri dari: `'admin'`, `'dokter'`, `'pasien'` |
+| `reference_id`| INT | NULLABLE | Berisi ID yang merujuk pada tabel entitas (jika admin = NULL, jika pasien = `patients.id`, jika dokter = `doctors.id`) |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | - |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | - |
 
-Menggunakan gaya Modern Minimalist Dashboard.
+### B. Tabel `patients` (Entitas Pasien)
+Menyimpan data demografi dan identitas pribadi pasien.
+| Field | Tipe | Constraints | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | PK, Auto Increment | ID Pasien |
+| `medical_record_no` | VARCHAR(20) | UNIQUE, NOT NULL | Nomor Rekam Medis (Format: RMXXXX) |
+| `nik` | VARCHAR(16) | UNIQUE, NOT NULL | Nomor Induk Kependudukan (Harus 16 angka) |
+| `name` | VARCHAR(100) | NOT NULL | Nama Lengkap Pasien |
+| `gender` | ENUM | NOT NULL | `'L'` (Laki-laki) atau `'P'` (Perempuan) |
+| `birth_place` | VARCHAR(100) | NOT NULL | Tempat Kelahiran |
+| `birth_date` | DATE | NOT NULL | Tanggal Lahir |
+| `phone` | VARCHAR(20) | NOT NULL | Nomor Telepon / HP aktif |
+| `address` | TEXT | NOT NULL | Alamat tempat tinggal lengkap |
+| `email` | VARCHAR(100) | UNIQUE, NOT NULL | Alamat Email |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | - |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | - |
 
-Karakteristik:
+### C. Tabel `doctors` (Entitas Dokter)
+Menyimpan data identitas medis para dokter yang bertugas.
+| Field | Tipe | Constraints | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | PK, Auto Increment | ID Dokter |
+| `name` | VARCHAR(100) | NOT NULL | Nama Lengkap Dokter (dengan Gelar) |
+| `poli` | VARCHAR(50) | NOT NULL | Poli terdaftar (Umum, Gigi, Anak, dll) |
+| `no_str` | VARCHAR(4) | UNIQUE, NOT NULL | Nomor Surat Tanda Registrasi (Harus 4 angka) |
+| `email` | VARCHAR(100) | UNIQUE, NOT NULL | Alamat Email |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | - |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | - |
 
-Bersih
-Banyak ruang kosong (white space)
-Mudah dibaca
-Responsif
-Warna lembut
-Ikon sederhana
-Card-based layout
-Warna
+### D. Tabel `visits` (Entitas Transaksional Pelayanan Medis)
+Tabel ini mencatat relasi *many-to-many* konseptual (kunjungan) antara Pasien dan sistem/dokter.
+| Field | Tipe | Constraints | Keterangan |
+| :--- | :--- | :--- | :--- |
+| `id` | INT | PK, Auto Increment | ID Kunjungan |
+| `patient_id` | INT | FK -> `patients.id` | ID Pasien yang berkunjung |
+| `doctor_id` | INT | FK -> `doctors.id` | ID Dokter yang dituju |
+| `visit_date` | DATE | NOT NULL | Tanggal kunjungan |
+| `complaint` | TEXT | NOT NULL | Keluhan utama pasien |
+| `status` | ENUM | NOT NULL | Terdiri dari: `'Menunggu'`, `'Diproses'`, `'Selesai'` |
+| `note` | TEXT | NULLABLE | Catatan administratif |
+| `service_note` | TEXT | NULLABLE | Catatan medis / diagnosis / resep dari Dokter |
+| `created_at` | TIMESTAMP | DEFAULT CURRENT_TIMESTAMP | - |
+| `updated_at` | TIMESTAMP | ON UPDATE CURRENT_TIMESTAMP | - |
 
-Primary
+### E. Relasi Database (ERD Requirements)
+- **`users` (1) to `patients` (1):** Relasi *One-to-One*. Field `users.reference_id` me-referensi ke `patients.id` di mana `users.role = 'pasien'`.
+- **`users` (1) to `doctors` (1):** Relasi *One-to-One*. Field `users.reference_id` me-referensi ke `doctors.id` di mana `users.role = 'dokter'`.
+- **`patients` (1) to `visits` (N):** Relasi *One-to-Many*. Satu pasien dapat memiliki banyak riwayat kunjungan. Terhubung melalui `visits.patient_id` ke `patients.id` (Terdapat constraint `ON DELETE CASCADE`).
 
-#2563EB
+---
 
-Secondary
+## 5. Fitur dan Modul Aplikasi
 
-#14B8A6
+### A. Modul Autentikasi & Registrasi
+1. **Login System:**
+   - Memverifikasi `username` dan `password` (melalui verifikasi Hash Bcrypt) ke tabel `users`.
+   - Mengisi data `$_SESSION` di PHP dan mengirim session cookie.
+2. **Registrasi Pasien (Public):**
+   - Mengisi form NIK, Nama, Tempat/Tgl Lahir, Alamat, No Telpon, Email, dan Password.
+   - Sistem auto-generate `medical_record_no` dan `username`.
+   - Data tersimpan ke tabel `patients` dan tabel `users` (otomatis terikat dengan `reference_id`).
+3. **Registrasi Dokter (Public):**
+   - Mengisi form Nama, Poli, No STR, Email, Password.
+   - Sistem memvalidasi No STR tidak duplikat.
+   - Data tersimpan ke tabel `doctors` dan tabel `users`.
 
-Background
+### B. Modul Keamanan Akun
+1. **Profil Pengguna (Universal):**
+   - Mengubah data kontak, alamat, atau biodata (Validasi No STR dan NIK dijalankan untuk menghindari konflik duplikasi).
+2. **Ubah Password (Universal):**
+   - Memerlukan input Password Lama, Password Baru, Konfirmasi Password Baru.
+   - Berlaku untuk semua Role.
 
-#F8FAFC
+### C. Modul Dashboard (Pusat Informasi)
+- **Admin Dashboard:** Menampilkan total rekap, grafik *Bar Chart* (Recharts) berdasarkan periode (hari/minggu/bulan/tahun), dan riwayat 5 kunjungan terakhir. Dihiasi dengan "Selamat Datang Admin".
+- **Doctor Dashboard:** Menampilkan jumlah pasien hari ini untuk dirinya, list antrean interaktif untuk mengubah Status (Menunggu, Diproses, Selesai) dan mengisi Form Catatan (Service Note). Dihiasi "Selamat Datang Dokter [Nama]".
+- **Patient Dashboard:** Menampilkan ringkasan profil demografi diri sendiri, NIK, dan list riwayat semua keluhan, status kunjungan, dan catatan resep dari dokter secara *read-only*. Dihiasi "Selamat Datang [Nama]".
 
-Card
+### D. Modul Data Master (Admin Only)
+- **CRUD Pasien:** Administrator dapat mengedit seluruh rekam identitas pasien.
+- **CRUD Kunjungan:** Administrator berperan mendaftarkan keluhan kunjungan baru, men-set tanggal, dan mengarahkan pasien ke dokter tertentu.
 
-#FFFFFF
+---
 
-Text
+## 6. Struktur Sistem Direktori
 
-#1E293B
-
-Border
-
-#E2E8F0
-Font
-
-Menggunakan Inter sebagai font utama.
-
-Alasan:
-
-Modern dan profesional.
-Sangat mudah dibaca pada dashboard.
-Banyak digunakan pada aplikasi seperti Vercel, Stripe, Notion, GitHub, Linear, dan dashboard SaaS modern.
-
-Cadangan (fallback):
-
-font-family: 'Inter', sans-serif;
-
-Ukuran font yang disarankan:
-
-Elemen	Ukuran
-Judul Halaman	30 px
-Judul Card	20 px
-Heading Tabel	16 px
-Isi Tabel	14 px
-Sidebar	15 px
-Button	14 px
-6. Struktur Menu
-Dashboard
-
-├── Data Pasien
-
-└── Data Kunjungan
-7. Dashboard
-Tujuan
-
-Memberikan ringkasan informasi kepada admin.
-
-Informasi yang ditampilkan
-
-Card:
-
-Total Pasien
-Total Kunjungan
-
-Grafik:
-
-Jumlah kunjungan per bulan
-
-Aktivitas terbaru:
-
-Lima data kunjungan terakhir
-8. Data Pasien
-Fungsi
-
-Mengelola seluruh data pasien.
-
-Fitur
-Melihat data pasien
-Menambah pasien
-Mengubah data pasien
-Menghapus pasien
-Pencarian pasien
-Data yang disimpan
-Field	Tipe
-No RM	Text
-Nama	Text
-NIK	Text
-Jenis Kelamin	Dropdown
-Tanggal Lahir	Date
-Nomor HP	Text
-Alamat	Text
-9. Data Kunjungan
-Fungsi
-
-Mengelola data kunjungan pasien.
-
-Fitur
-Melihat data kunjungan
-Menambah kunjungan
-Mengubah kunjungan
-Menghapus kunjungan
-Pencarian
-Data yang disimpan
-Field	Tipe
-Tanggal	Date
-Pasien	Dropdown
-Keluhan	Textarea
-Dokter	Text
-Status	Dropdown
-
-Status:
-
-Menunggu
-
-Diproses
-
-Selesai
-10. Struktur Frontend
+### Frontend (`src/`)
+```text
 src/
+ ├── components/       # Reusable components (StatusBadge, ProtectedRoute)
+ ├── context/          # AuthContext (Auth) & DataContext (Patients/Visits CRUD)
+ ├── layouts/          # MainLayout (Sidebar, Mobile Header, Routing Outlet)
+ ├── pages/
+ │    ├── Auth/        # Login, RegisterPatient, RegisterDoctor
+ │    ├── Dashboard/   # AdminDashboard, DoctorDashboard, PatientDashboard
+ │    ├── Profile/     # Profile (Ubah Profil & Ubah Password)
+ │    ├── Patients/    # Modul CRUD Pasien (Admin)
+ │    └── Visits/      # Modul CRUD Kunjungan (Admin)
+ ├── services/         # Axios API interceptors
+ ├── App.jsx           # Master Route Config
+ └── main.jsx          # React DOM Injector
+```
 
-assets/
-
-components/
-
-layouts/
-
-pages/
-
-Dashboard/
-
-Patients/
-
-Visits/
-
-services/
-
-routes/
-
-App.jsx
-
-main.jsx
-11. Struktur Backend
+### Backend (`backend/`)
+```text
 backend/
-
-config/
-
-api/
-
-patients/
-
-visits/
-
-dashboard/
-
-db.php
-
-index.php
-
-Contoh endpoint sederhana:
-
-GET    /api/patients.php
-
-POST   /api/patients.php
-
-PUT    /api/patients.php?id=1
-
-DELETE /api/patients.php?id=1
-12. Database
-Tabel patients
-Field	Tipe
-id	INT
-medical_record_number	VARCHAR(20)
-nik	VARCHAR(16)
-name	VARCHAR(100)
-gender	ENUM
-birth_date	DATE
-phone	VARCHAR(20)
-address	TEXT
-Tabel visits
-Field	Tipe
-id	INT
-patient_id	INT
-visit_date	DATE
-complaint	TEXT
-doctor	VARCHAR(100)
-status	VARCHAR(20)
-13. Relasi Database
-patients
-
-id
-nama
-
-      │
-
-      │ 1
-
-      │
-
-      ▼
-
-visits
-
-patient_id
-
-      ∞
-
-Satu pasien dapat memiliki banyak data kunjungan.
-
-14. Validasi Data
-Pasien
-Nama wajib diisi.
-NIK harus terdiri dari 16 digit.
-Nomor Rekam Medis tidak boleh sama.
-Nomor HP hanya boleh berisi angka.
-Tanggal lahir tidak boleh melebihi tanggal saat ini.
-Kunjungan
-Pasien wajib dipilih.
-Tanggal kunjungan wajib diisi.
-Keluhan wajib diisi.
-Dokter wajib diisi.
-Status wajib dipilih.
-15. Alur Aplikasi
-Dashboard
-
-↓
-
-Data Pasien
-
-↓
-
-Tambah Pasien
-
-↓
-
-Data Tersimpan
-
-↓
-
-Data Kunjungan
-
-↓
-
-Pilih Pasien
-
-↓
-
-Isi Keluhan
-
-↓
-
-Simpan
-
-↓
-
-Dashboard Diperbarui
-16. Target Hasil
-
-Aplikasi yang dihasilkan memiliki karakteristik berikut:
-
-Dashboard sederhana dengan ringkasan data.
-CRUD Data Pasien.
-CRUD Data Kunjungan.
-Database MySQL dengan relasi yang jelas.
-Tampilan modern dan responsif.
-Struktur kode yang mudah dipelajari dan dikembangkan.
-
-Database Design
-Database Name
-db_klinik
-Entity Relationship Diagram (ERD)
-                +----------------------+
-                |       patients       |
-                +----------------------+
-                | PK id                |
-                | medical_record_no    |
-                | nik                  |
-                | name                 |
-                | gender               |
-                | birth_date           |
-                | phone                |
-                | address              |
-                | created_at           |
-                | updated_at           |
-                +----------------------+
-                           │
-                           │ 1
-                           │
-                           │
-                           ▼
-                +----------------------+
-                |        visits        |
-                +----------------------+
-                | PK id                |
-                | FK patient_id        |
-                | visit_date           |
-                | complaint            |
-                | doctor               |
-                | status               |
-                | note                 |
-                | created_at           |
-                | updated_at           |
-                +----------------------+
-
-Relasi:
-
-Satu pasien dapat memiliki banyak kunjungan (One to Many).
-
-Tabel 1 : patients
-Fungsi
-
-Menyimpan seluruh identitas pasien.
-
-Field	Tipe	Length	Constraint	Keterangan
-id	INT	11	PK AI	Primary Key
-medical_record_no	VARCHAR	20	UNIQUE	Nomor Rekam Medis
-nik	VARCHAR	16	UNIQUE	Nomor Induk Kependudukan
-name	VARCHAR	100	NOT NULL	Nama Pasien
-gender	ENUM	-	NOT NULL	L / P
-birth_date	DATE	-	NOT NULL	Tanggal Lahir
-phone	VARCHAR	20	NULL	Nomor HP
-address	TEXT	-	NULL	Alamat
-created_at	TIMESTAMP	-	DEFAULT CURRENT_TIMESTAMP	Waktu dibuat
-updated_at	TIMESTAMP	-	CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP	Waktu diperbarui
-Penjelasan Field
-id
-
-Primary Key.
-
-Contoh
-
-1
-2
-3
-medical_record_no
-
-Nomor rekam medis.
-
-Contoh
-
-RM0001
-RM0002
-RM0003
-
-Harus unik.
-
-nik
-
-Nomor KTP pasien.
-
-Contoh
-
-2171123456789012
-gender
-
-Nilai yang diperbolehkan
-
-L
-P
-Tabel 2 : visits
-Fungsi
-
-Menyimpan seluruh riwayat kunjungan pasien.
-
-Field	Tipe	Length	Constraint	Keterangan
-id	INT	11	PK AI	Primary Key
-patient_id	INT	11	FK	Relasi ke pasien
-visit_date	DATE	-	NOT NULL	Tanggal Kunjungan
-complaint	TEXT	-	NOT NULL	Keluhan
-doctor	VARCHAR	100	NOT NULL	Nama Dokter
-status	ENUM	-	NOT NULL	Status Kunjungan
-note	TEXT	-	NULL	Catatan
-created_at	TIMESTAMP	-	DEFAULT CURRENT_TIMESTAMP	Waktu dibuat
-updated_at	TIMESTAMP	-	CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP	Waktu diperbarui
-Status
-Menunggu
-
-Diproses
-
-Selesai
-Normalisasi Database
-
-Database ini sudah memenuhi Third Normal Form (3NF) karena:
-
-Tidak ada data pasien yang disimpan berulang pada tabel visits.
-Data kunjungan hanya menyimpan patient_id sebagai foreign key.
-Setiap tabel memiliki satu tanggung jawab (single responsibility).
-SQL Pembuatan Database
-CREATE DATABASE db_klinik;
-USE db_klinik;
-SQL Tabel patients
-CREATE TABLE patients (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    medical_record_no VARCHAR(20) NOT NULL UNIQUE,
-    nik VARCHAR(16) NOT NULL UNIQUE,
-    name VARCHAR(100) NOT NULL,
-    gender ENUM('L','P') NOT NULL,
-    birth_date DATE NOT NULL,
-    phone VARCHAR(20),
-    address TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP
-);
-SQL Tabel visits
-CREATE TABLE visits (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    patient_id INT NOT NULL,
-    visit_date DATE NOT NULL,
-    complaint TEXT NOT NULL,
-    doctor VARCHAR(100) NOT NULL,
-    status ENUM('Menunggu','Diproses','Selesai') NOT NULL,
-    note TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_patient
-        FOREIGN KEY (patient_id)
-        REFERENCES patients(id)
-        ON DELETE CASCADE
-        ON UPDATE CASCADE
-);
-Contoh Data
-patients
-id	No RM	Nama
-1	RM0001	Andi Saputra
-2	RM0002	Budi Hartono
-3	RM0003	Siti Aminah
-visits
-id	patient_id	Dokter
-1	1	dr. Ahmad
-2	1	dr. Budi
-3	2	dr. Rina
-Struktur Folder Backend
-backend/
-│
-├── config/
-│   └── database.php
-│
-├── api/
-│   ├── dashboard.php
-│   ├── patients.php
-│   └── visits.php
-│
-├── models/
-│   ├── Patient.php
-│   └── Visit.php
-│
-└── db_klinik.sql 
+ ├── api/
+ │    ├── auth/          # login.php, logout.php, profile.php, register_doctor.php, register_patient.php, change_password.php, update_profile.php
+ │    ├── doctor/        # visits.php, update_status.php, update_note.php
+ │    ├── patient/       # history.php
+ │    └── ...            # patients.php, visits.php (Admin)
+ ├── config/
+ │    └── database.php   # PDO DB Connector
+ ├── models/
+ │    ├── Doctor.php     # Query Builder untuk tabel doctors
+ │    ├── Patient.php    # Query Builder untuk tabel patients
+ │    └── Visit.php      # Query Builder untuk tabel visits
+ ├── utils/
+ │    └── auth.php       # Fungsi Cek Session, Cek Role, Middleware CORS
+ └── db_klinik.sql       # Skema dan Dummy Data (Migration)
+```
+
+---
+
+## 7. Keamanan Sistem (Security Measures)
+
+1. **Session & Cookie:** Sesi dipegang murni oleh backend PHP (tanpa JWT/Local Storage). React mengirim kredensial via `withCredentials: true`. Cookie bersifat *HttpOnly* sehingga aman dari eksploitasi skrip XSS.
+2. **Role Verification Middleware:** Setiap Endpoint PHP akan memanggil fungsi `require_role([...])` untuk memblokir by-pass URL langsung menggunakan Postman/cURL jika tidak memiliki session role yang valid.
+3. **Route Protection (React):** Routing di dalam `App.jsx` dibungkus dengan komponen `<ProtectedRoute>` yang melarang akses URL jika State/Context Role pengguna tidak sesuai.
+4. **Prepared Statement:** Seluruh kueri model backend (`Patient.php`, `Doctor.php`, `Visit.php`) menggunakan metode PDO `bindParam` yang secara otomatis menetralisir bahaya serangan SQL Injection.
+5. **Password Hashing:** Kata sandi disimpan secara aman dalam bentuk *Hash* menggunakan algoritma modern (Bcrypt via `password_hash()`) guna memastikan kerahasiaan data (Confidentiality) sesuai kaidah C.I.A Triad.

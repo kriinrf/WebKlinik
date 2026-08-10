@@ -2,18 +2,13 @@
 // =============================================
 // API: Visits (CRUD)
 // =============================================
+require_once __DIR__ . '/../utils/auth.php';
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-// Handle preflight
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
 
 require_once __DIR__ . '/../config/database.php';
+
+// Require login for default, we will handle roles manually
+$user = require_login();
 require_once __DIR__ . '/../models/Visit.php';
 
 $database = new Database();
@@ -23,11 +18,20 @@ $visit = new Visit($db);
 $method = $_SERVER['REQUEST_METHOD'];
 
 switch ($method) {
-    // ---- GET: List all or single visit ----
     case 'GET':
+        // Allow admin and dokter to GET
+        if (!in_array($user['role'], ['admin', 'dokter'])) {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Forbidden']);
+            break;
+        }
+
         if (isset($_GET['id'])) {
             $result = $visit->getById($_GET['id']);
             if ($result) {
+                if ($user['role'] === 'pasien' && $result['patient_id'] != $user['reference_id']) {
+                    $result['patient_name'] = mask_string($result['patient_name']);
+                }
                 echo json_encode(['status' => 'success', 'data' => $result]);
             } else {
                 http_response_code(404);
@@ -36,12 +40,26 @@ switch ($method) {
         } else {
             $search = isset($_GET['search']) ? $_GET['search'] : '';
             $result = $visit->getAll($search);
+            
+            if ($user['role'] === 'pasien') {
+                foreach ($result as &$row) {
+                    if ($row['patient_id'] != $user['reference_id']) {
+                        $row['patient_name'] = mask_string($row['patient_name']);
+                    }
+                }
+            }
+            
             echo json_encode(['status' => 'success', 'data' => $result]);
         }
         break;
 
     // ---- POST: Create new visit ----
     case 'POST':
+        if ($user['role'] !== 'admin') {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Hanya admin yang dapat menambah data']);
+            break;
+        }
         $data = json_decode(file_get_contents('php://input'), true);
 
         // Validation
@@ -81,6 +99,11 @@ switch ($method) {
 
     // ---- PUT: Update visit ----
     case 'PUT':
+        if ($user['role'] !== 'admin') {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Hanya admin yang dapat mengubah data']);
+            break;
+        }
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['status' => 'error', 'message' => 'ID kunjungan diperlukan']);
@@ -131,6 +154,11 @@ switch ($method) {
 
     // ---- DELETE: Delete visit ----
     case 'DELETE':
+        if ($user['role'] !== 'admin') {
+            http_response_code(403);
+            echo json_encode(['status' => 'error', 'message' => 'Hanya admin yang dapat menghapus data']);
+            break;
+        }
         if (!isset($_GET['id'])) {
             http_response_code(400);
             echo json_encode(['status' => 'error', 'message' => 'ID kunjungan diperlukan']);
