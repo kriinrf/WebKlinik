@@ -8,7 +8,7 @@ class Database {
     private $host = 'sql107.infinityfree.com';
     private $db_name = 'if0_42625673_klinik_sejahterah';
     private $username = 'if0_42625673';
-    private $password = 'UXsiwujob0Rujsx';
+    private $password = 'XY8a3TYYijZM';
     private $conn;
 
     public function getConnection() {

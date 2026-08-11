@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Base URL for PHP backend API
 // Sesuaikan dengan URL XAMPP/WAMP Anda
-const API_BASE = 'https://kliniksejahterah.gt.tc/backend/api';
+const API_BASE = '/backend/api';
 
 const api = axios.create({
   baseURL: API_BASE,
