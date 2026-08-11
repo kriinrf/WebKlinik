@@ -5,10 +5,10 @@
 // =============================================
 
 class Database {
-    private $host = 'localhost';
-    private $db_name = 'db_klinik';
-    private $username = 'root';
-    private $password = '';
+    private $host = 'sql107.infinityfree.com';
+    private $db_name = 'if0_42625673_klinik_sejahterah';
+    private $username = 'if0_42625673';
+    private $password = 'UXsiwujob0Rujsx';
     private $conn;
 
     public function getConnection() {

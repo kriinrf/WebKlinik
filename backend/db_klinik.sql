@@ -3,8 +3,8 @@
 -- Sistem Informasi Klinik Sejahterah
 -- =============================================
 
-CREATE DATABASE IF NOT EXISTS db_klinik;
-USE db_klinik;
+-- CREATE DATABASE IF NOT EXISTS db_klinik;
+-- USE db_klinik;
 
 -- =============================================
 -- Tabel: patients

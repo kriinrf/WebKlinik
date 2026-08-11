@@ -3,7 +3,7 @@
 -- Sistem Informasi Klinik Sejahterah
 -- =============================================
 
-USE db_klinik;
+-- USE db_klinik;
 
 -- =============================================
 -- Tabel Baru: doctors

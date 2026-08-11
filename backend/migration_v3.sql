@@ -1,4 +1,4 @@
-USE db_klinik;
+-- USE db_klinik;
 
 -- 1. Hapus kolom username di tabel patients (Normalisasi 3NF)
 ALTER TABLE patients DROP COLUMN username;
