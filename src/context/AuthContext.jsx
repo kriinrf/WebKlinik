@@ -3,7 +3,7 @@ import axios from 'axios';
 
 // Create Axios instance with credentials
 export const api = axios.create({
-  baseURL: 'http://kliniksejahterah.gt.tc/backend/api',
+  baseURL: 'https://kliniksejahterah.gt.tc/backend/api',
   withCredentials: true
 });
 
